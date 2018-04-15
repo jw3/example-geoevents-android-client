@@ -1,4 +1,4 @@
-package com.github.jw3.examplegeoeventsclient
+package com.github.jw3.geoevents
 
 import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getTargetContext()
-        assertEquals("com.github.jw3.examplegeoeventsclient", appContext.packageName)
+        assertEquals("com.github.jw3.geoevents", appContext.packageName)
     }
 }

@@ -1,4 +1,4 @@
-package com.github.jw3.examplegeoeventsclient
+package com.github.jw3.geoevents
 
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle

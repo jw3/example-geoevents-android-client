@@ -1,4 +1,4 @@
-package com.github.jw3.examplegeoeventsclient
+package com.github.jw3.geoevents
 
 import org.junit.Test
 
