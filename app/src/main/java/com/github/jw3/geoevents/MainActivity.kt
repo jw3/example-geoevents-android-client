@@ -19,13 +19,23 @@ import io.reactivex.BackpressureStrategy
 import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.TimeUnit
 
 
 class MainActivity : AppCompatActivity() {
     private val graphics = mutableMapOf<String, Graphic>()
 
+    private fun client(): OkHttpClient {
+        return OkHttpClient.Builder()
+                .connectTimeout(300, TimeUnit.SECONDS)
+                .readTimeout(300, TimeUnit.SECONDS)
+                .writeTimeout(300, TimeUnit.SECONDS)
+                .build()
+    }
+
     private fun wsreq(): Request {
-        return Request.Builder().get().url("ws://10.0.2.2:9000/api/watch/device").build()
+        return Request.Builder()
+                .get().url("ws://10.0.2.2:9000/api/watch/device").build()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,7 +66,7 @@ class MainActivity : AppCompatActivity() {
 
         val othersMarker = SimpleMarkerSymbol(SimpleMarkerSymbol.Style.CIRCLE, -0x10000, 10f)
 
-        RxWSocket(OkHttpClient(), wsreq())
+        RxWSocket(client(), wsreq())
                 .webSocketFlowable(BackpressureStrategy.BUFFER)
                 .subscribe {
                     when (it) {
