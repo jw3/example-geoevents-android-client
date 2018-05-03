@@ -1,7 +1,7 @@
 package com.github.jw3.geoevents
 
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.support.v7.app.AppCompatActivity
 import android.widget.Toast
 import com.esri.arcgisruntime.geometry.Point
 import com.esri.arcgisruntime.geometry.SpatialReferences
@@ -11,14 +11,12 @@ import com.esri.arcgisruntime.mapping.Basemap
 import com.esri.arcgisruntime.mapping.view.Graphic
 import com.esri.arcgisruntime.mapping.view.GraphicsOverlay
 import com.esri.arcgisruntime.mapping.view.LocationDisplay
-import com.esri.arcgisruntime.symbology.MarkerSymbol
 import com.esri.arcgisruntime.symbology.SimpleMarkerSymbol
-import com.github.bobby.rxwsocket.RxWSEvent
-import com.github.bobby.rxwsocket.RxWSocket
-import io.reactivex.BackpressureStrategy
 import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import java.util.concurrent.TimeUnit
 
 
@@ -26,11 +24,7 @@ class MainActivity : AppCompatActivity() {
     private val graphics = mutableMapOf<String, Graphic>()
 
     private fun client(): OkHttpClient {
-        return OkHttpClient.Builder()
-                .connectTimeout(300, TimeUnit.SECONDS)
-                .readTimeout(300, TimeUnit.SECONDS)
-                .writeTimeout(300, TimeUnit.SECONDS)
-                .build()
+        return OkHttpClient.Builder().build()
     }
 
     private fun wsreq(): Request {
@@ -66,34 +60,25 @@ class MainActivity : AppCompatActivity() {
 
         val othersMarker = SimpleMarkerSymbol(SimpleMarkerSymbol.Style.CIRCLE, -0x10000, 10f)
 
-        RxWSocket(client(), wsreq())
-                .webSocketFlowable(BackpressureStrategy.BUFFER)
-                .subscribe {
-                    when (it) {
-                        is RxWSEvent.OpenEvent -> println("Opened Flowable")
-                        is RxWSEvent.MessageStringEvent -> {
-                            it.text?.let { encoded ->
-                                val split = encoded.split(":")
-                                val id = split[0]
-                                val x = split[1].toDouble()
-                                val y = split[2].toDouble()
-                                // api24; val g = graphics.computeIfAbsent(id, { str -> Graphic(Point(0.0, 0.0)) })
-                                if (!graphics.containsKey(id)) {
-                                    val g = Graphic(Point(x, y, SpatialReferences.getWgs84()), othersMarker)
-                                    graphics.put(id, g)
-                                    graphicsLayer.graphics.add(g)
-                                }
-                                graphics[id]?.let { g ->
-                                    g.geometry = Point(x, y, SpatialReferences.getWgs84())
-                                }
-                            }
-                        }
-                        is RxWSEvent.MessageByteEvent -> println("Receive Message Byte: " + it.bytes)
-                        is RxWSEvent.ClosingEvent -> println("Closing")
-                        is RxWSEvent.FailureEvent -> println("Failure, " + it.throwable)
-                        is RxWSEvent.ClosedEvent -> println("Closed")
+        client().newWebSocket(wsreq(), object : WebSocketListener() {
+            override fun onMessage(webSocket: WebSocket?, text: String?) {
+                text?.let { encoded ->
+                    val split = encoded.split(":")
+                    val id = split[0]
+                    val x = split[1].toDouble()
+                    val y = split[2].toDouble()
+                    // api24; val g = graphics.computeIfAbsent(id, { str -> Graphic(Point(0.0, 0.0)) })
+                    if (!graphics.containsKey(id)) {
+                        val g = Graphic(Point(x, y, SpatialReferences.getWgs84()), othersMarker)
+                        graphics.put(id, g)
+                        graphicsLayer.graphics.add(g)
+                    }
+                    graphics[id]?.let { g ->
+                        g.geometry = Point(x, y, SpatialReferences.getWgs84())
                     }
                 }
+            }
+        })
     }
 
     override fun onPause() {
