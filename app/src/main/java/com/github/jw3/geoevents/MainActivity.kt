@@ -109,6 +109,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+
+        drawTracks.setOnCheckedChangeListener { x, b ->
+            tracksLayer.isVisible = b
+        }
     }
 
     override fun onPause() {

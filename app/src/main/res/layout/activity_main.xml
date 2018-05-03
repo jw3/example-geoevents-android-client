@@ -9,7 +9,21 @@
     <com.esri.arcgisruntime.mapping.view.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" >
+        android:layout_height="match_parent">
+
     </com.esri.arcgisruntime.mapping.view.MapView>
+
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ToggleButton
+            android:id="@+id/drawTracks"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:textOff="tracks off"
+            android:textOn="tracks on" />
+    </GridLayout>
 
 </android.support.constraint.ConstraintLayout>
