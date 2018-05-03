@@ -1,9 +1,12 @@
 package com.github.jw3.geoevents
 
+import android.graphics.Color
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.widget.Toast
 import com.esri.arcgisruntime.geometry.Point
+import com.esri.arcgisruntime.geometry.PointCollection
+import com.esri.arcgisruntime.geometry.Polyline
 import com.esri.arcgisruntime.geometry.SpatialReferences
 import com.esri.arcgisruntime.location.AndroidLocationDataSource
 import com.esri.arcgisruntime.mapping.ArcGISMap
@@ -11,17 +14,20 @@ import com.esri.arcgisruntime.mapping.Basemap
 import com.esri.arcgisruntime.mapping.view.Graphic
 import com.esri.arcgisruntime.mapping.view.GraphicsOverlay
 import com.esri.arcgisruntime.mapping.view.LocationDisplay
+import com.esri.arcgisruntime.symbology.SimpleLineSymbol
 import com.esri.arcgisruntime.symbology.SimpleMarkerSymbol
 import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import java.util.concurrent.TimeUnit
 
 
 class MainActivity : AppCompatActivity() {
-    private val graphics = mutableMapOf<String, Graphic>()
+    private val points = mutableMapOf<String, Point>()
+    private val tracks = mutableMapOf<String, PointCollection>()
+    private val locationGraphics = mutableMapOf<String, Graphic>()
+    private val trackingGraphics = mutableMapOf<String, Graphic>()
 
     private fun client(): OkHttpClient {
         return OkHttpClient.Builder().build()
@@ -40,6 +46,7 @@ class MainActivity : AppCompatActivity() {
 
         mapView.map = map
 
+
         val ld = mapView.locationDisplay
 
         val ds = AndroidLocationDataSource(applicationContext)
@@ -55,10 +62,15 @@ class MainActivity : AppCompatActivity() {
         if (!ld.isStarted)
             ld.startAsync()
 
-        val graphicsLayer = GraphicsOverlay()
-        mapView.graphicsOverlays.add(graphicsLayer)
+        val locationsLayer = GraphicsOverlay()
+        val tracksLayer = GraphicsOverlay()
+        tracksLayer.opacity = 0.25f
+        mapView.graphicsOverlays.addAll(
+                listOf(locationsLayer, tracksLayer)
+        )
 
-        val othersMarker = SimpleMarkerSymbol(SimpleMarkerSymbol.Style.CIRCLE, -0x10000, 10f)
+        val locationMarker = SimpleMarkerSymbol(SimpleMarkerSymbol.Style.CIRCLE, -0x10000, 10f)
+        val trackMarker = SimpleLineSymbol(SimpleLineSymbol.Style.SOLID, -0x10000, 5f)
 
         client().newWebSocket(wsreq(), object : WebSocketListener() {
             override fun onMessage(webSocket: WebSocket?, text: String?) {
@@ -67,14 +79,32 @@ class MainActivity : AppCompatActivity() {
                     val id = split[0]
                     val x = split[1].toDouble()
                     val y = split[2].toDouble()
-                    // api24; val g = graphics.computeIfAbsent(id, { str -> Graphic(Point(0.0, 0.0)) })
-                    if (!graphics.containsKey(id)) {
-                        val g = Graphic(Point(x, y, SpatialReferences.getWgs84()), othersMarker)
-                        graphics.put(id, g)
-                        graphicsLayer.graphics.add(g)
+                    val pt = Point(x, y, SpatialReferences.getWgs84())
+
+                    // api24; val g = locationGraphics.computeIfAbsent(id, { str -> Graphic(Point(0.0, 0.0)) })
+                    if (!locationGraphics.containsKey(id)) {
+                        points.put(id, pt)
+
+                        val g = Graphic(pt, locationMarker)
+                        locationGraphics.put(id, g)
+                        locationsLayer.graphics.add(g)
+
+                        val ptc = PointCollection(listOf(pt), SpatialReferences.getWgs84())
+                        tracks.put(id, ptc)
+
+                        val t = Graphic(Polyline(ptc), trackMarker)
+                        trackingGraphics.put(id, t)
+                        tracksLayer.graphics.add(t)
                     }
-                    graphics[id]?.let { g ->
-                        g.geometry = Point(x, y, SpatialReferences.getWgs84())
+                    locationGraphics[id]?.let { g ->
+                        g.geometry = pt
+                    }
+                    tracks[id]?.let { ptc ->
+                        ptc.add(pt)
+
+                        trackingGraphics[id]?.let { g ->
+                            g.geometry = Polyline(ptc)
+                        }
                     }
                 }
             }
