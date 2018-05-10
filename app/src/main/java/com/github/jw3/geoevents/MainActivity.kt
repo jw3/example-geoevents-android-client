@@ -65,12 +65,16 @@ class MainActivity : AppCompatActivity() {
         val locationsLayer = GraphicsOverlay()
         val tracksLayer = GraphicsOverlay()
         tracksLayer.opacity = 0.25f
+        val myTrackLayer = GraphicsOverlay()
+        myTrackLayer.opacity = 0.25f
+
         mapView.graphicsOverlays.addAll(
-                listOf(locationsLayer, tracksLayer)
+                listOf(locationsLayer, myTrackLayer, tracksLayer)
         )
 
         val locationMarker = SimpleMarkerSymbol(SimpleMarkerSymbol.Style.CIRCLE, -0x10000, 10f)
-        val trackMarker = SimpleLineSymbol(SimpleLineSymbol.Style.SOLID, -0x10000, 5f)
+        val othersTrackMarker = SimpleLineSymbol(SimpleLineSymbol.Style.SOLID, -0x10000, 5f)
+        val myTrackMarker = SimpleLineSymbol(SimpleLineSymbol.Style.SOLID, -0x01110, 5f)
 
         client().newWebSocket(wsreq(), object : WebSocketListener() {
             override fun onMessage(webSocket: WebSocket?, text: String?) {
@@ -92,7 +96,7 @@ class MainActivity : AppCompatActivity() {
                         val ptc = PointCollection(listOf(pt), SpatialReferences.getWgs84())
                         tracks.put(id, ptc)
 
-                        val t = Graphic(Polyline(ptc), trackMarker)
+                        val t = Graphic(Polyline(ptc), othersTrackMarker)
                         trackingGraphics.put(id, t)
                         tracksLayer.graphics.add(t)
                     }
@@ -110,8 +114,28 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        drawTracks.setOnCheckedChangeListener { x, b ->
-            tracksLayer.isVisible = b
+        drawTracks.setOnCheckedChangeListener { _, v ->
+            tracksLayer.isVisible = v
+        }
+
+        newTrack.setOnCheckedChangeListener { _, v ->
+            if (v) {
+                // http call to new track endpoint
+                client().newCall(track("start"))
+                val pt = Point(9.0, 9.0)
+
+                val ptc = PointCollection(listOf(pt), SpatialReferences.getWgs84())
+                tracks.put("me", ptc)
+
+                val t = Graphic(Polyline(ptc), myTrackMarker)
+
+                trackingGraphics.put("me", t)
+                myTrackLayer.graphics.add(t)
+            } else {
+                // http call to complete track endpoint
+                client().newCall(track("stop"))
+                // move tracking graphic from the new-track layer to the tracking layer
+            }
         }
     }
 
@@ -123,5 +147,11 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         mapView.resume()
+    }
+
+    fun track(op: String): Request {
+        return Request.Builder()
+                .post(RequestBody.create(null, ""))
+                .url("ws://10.0.2.2:9000/api/device/default/track/start").build()
     }
 }

@@ -24,6 +24,15 @@
             android:checked="true"
             android:textOff="tracks off"
             android:textOn="tracks on" />
+
+        <ToggleButton
+            android:id="@+id/newTrack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:textOff="New Track"
+            android:textOn="Complete Track" />
+
     </GridLayout>
 
 </android.support.constraint.ConstraintLayout>
