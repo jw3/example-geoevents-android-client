@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
             val acc = e.location.horizontalAccuracy
             val lon = e.location.position.x
             val lat = e.location.position.y
-            Toast.makeText(this@MainActivity, "$lon:$lat to $acc units", Toast.LENGTH_LONG).show()
+            Toast.makeText(this@MainActivity, "$lon:$lat to $acc units", Toast.LENGTH_SHORT).show()
         }
 
         ld.autoPanMode = LocationDisplay.AutoPanMode.NAVIGATION
