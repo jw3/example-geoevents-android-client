@@ -1,6 +1,8 @@
 package com.github.jw3.geoevents
 
+import android.content.Intent
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.support.v7.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
@@ -18,7 +20,6 @@ import com.esri.arcgisruntime.symbology.SimpleLineSymbol
 import com.esri.arcgisruntime.symbology.SimpleMarkerSymbol
 import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.*
-import android.content.Intent
 
 
 class MainActivity : AppCompatActivity() {
@@ -29,12 +30,14 @@ class MainActivity : AppCompatActivity() {
     private val trackMarker = SimpleLineSymbol(SimpleLineSymbol.Style.SOLID, -0x01110, 5f)
     private val locationMarker = SimpleMarkerSymbol(SimpleMarkerSymbol.Style.CIRCLE, -0x10000, 10f)
 
-    private val deviceId = "default"
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.my_toolbar))
+
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        val deviceId = sharedPref.getString("preference_device_name", "unknown")
+        val serverUrl = sharedPref.getString("preference_server_url", "unknown")
 
         val map = ArcGISMap(Basemap.Type.IMAGERY, 34.056295, -117.195800, 16)
         val ld = mapView.locationDisplay
@@ -63,7 +66,7 @@ class MainActivity : AppCompatActivity() {
 
         mapView.graphicsOverlays.addAll(listOf(locationsLayer, activeTrackLayer, pastTracksLayer))
 
-        client().newWebSocket(wsreq(), object : WebSocketListener() {
+        client().newWebSocket(wsreq(serverUrl), object : WebSocketListener() {
             override fun onMessage(webSocket: WebSocket?, text: String?) {
                 text?.let { encoded ->
                     val split = encoded.split(":")
@@ -92,7 +95,7 @@ class MainActivity : AppCompatActivity() {
         newTrack.setOnCheckedChangeListener { _, v ->
             if (v) {
                 // http call to new track endpoint
-                client().newCall(track("start"))
+                client().newCall(track("start",serverUrl))
                 val pt = ld.location.position
 
                 val ptc = PointCollection(listOf(pt), SpatialReferences.getWgs84())
@@ -103,7 +106,7 @@ class MainActivity : AppCompatActivity() {
                 activeTrackLayer.graphics.add(t)
             } else {
                 // http call to complete track endpoint
-                client().newCall(track("stop"))
+                client().newCall(track("stop",serverUrl))
 
                 tracks.remove(deviceId)
                 val g = trackingGraphics[deviceId]
@@ -142,18 +145,18 @@ class MainActivity : AppCompatActivity() {
         else -> super.onOptionsItemSelected(item)
     }
 
-    private fun track(op: String): Request {
+    private fun track(op: String, url: String): Request {
         return Request.Builder()
                 .post(RequestBody.create(null, ""))
-                .url("ws://10.0.2.2:9000/api/device/default/track/$op").build()
+                .url("ws://$url/api/device/default/track/$op").build()
     }
 
     private fun client(): OkHttpClient {
         return OkHttpClient.Builder().build()
     }
 
-    private fun wsreq(): Request {
+    private fun wsreq(url: String): Request {
         return Request.Builder()
-                .get().url("ws://10.0.2.2:9000/api/watch/device").build()
+                .get().url("ws://$url/api/watch/device").build()
     }
 }

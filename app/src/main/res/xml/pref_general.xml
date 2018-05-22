@@ -1,23 +1,16 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
     <EditTextPreference
-        android:defaultValue="Default value"
+        android:defaultValue="default"
         android:key="preference_device_name"
         android:selectAllOnFocus="true"
         android:singleLine="true"
         android:title="Device Name" />
     <EditTextPreference
-        android:defaultValue="https://eventserver.url.com"
+        android:defaultValue="10.0.2.2:9000"
         android:key="preference_server_url"
         android:selectAllOnFocus="true"
         android:singleLine="true"
         android:title="Event Server URL" />
-
-    <!-- NOTE: EditTextPreference accepts EditText attributes. -->
-    <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
-
-    <!-- NOTE: Hide buttons to simplify the UI. Users can touch outside the dialog to
-         dismiss it. -->
-    <!-- NOTE: ListPreference's summary should be set to its value by the activity code. -->
 
 </PreferenceScreen>
