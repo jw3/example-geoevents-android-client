@@ -39,14 +39,18 @@ class MainActivity : AppCompatActivity() {
         val deviceId = sharedPref.getString("preference_device_name", "unknown")
         val serverUrl = sharedPref.getString("preference_server_url", "unknown")
 
-        val map = ArcGISMap(Basemap.Type.IMAGERY, 34.056295, -117.195800, 16)
         val ld = mapView.locationDisplay
+
+        val map = ArcGISMap(Basemap.Type.IMAGERY, 34.056295, -117.195800, 16)
+        mapView.map = map
+
+        ld.autoPanMode = LocationDisplay.AutoPanMode.NAVIGATION
+        if (!ld.isStarted)
+            ld.startAsync()
 
         ld.addLocationChangedListener { e ->
             val acc = e.location.horizontalAccuracy
-            val lon = e.location.position.x
-            val lat = e.location.position.y
-            Toast.makeText(this@MainActivity, "$lon:$lat to $acc units", Toast.LENGTH_SHORT).show()
+            accView.text = "${acc}m"
 
             tracks[deviceId]?.let { ptc ->
                 ptc.add(e.location.position)
@@ -114,11 +118,6 @@ class MainActivity : AppCompatActivity() {
                 pastTracksLayer.graphics.add(g)
             }
         }
-
-        mapView.map = map
-        ld.autoPanMode = LocationDisplay.AutoPanMode.NAVIGATION
-        if (!ld.isStarted)
-            ld.startAsync()
     }
 
     override fun onPause() {
