@@ -22,10 +22,14 @@ import android.content.Intent
 
 
 class MainActivity : AppCompatActivity() {
-    private val points = mutableMapOf<String, Point>()
     private val tracks = mutableMapOf<String, PointCollection>()
     private val locationGraphics = mutableMapOf<String, Graphic>()
     private val trackingGraphics = mutableMapOf<String, Graphic>()
+
+    private val trackMarker = SimpleLineSymbol(SimpleLineSymbol.Style.SOLID, -0x01110, 5f)
+    private val locationMarker = SimpleMarkerSymbol(SimpleMarkerSymbol.Style.CIRCLE, -0x10000, 10f)
+
+    private val deviceId = "default"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,8 +37,6 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(findViewById(R.id.my_toolbar))
 
         val map = ArcGISMap(Basemap.Type.IMAGERY, 34.056295, -117.195800, 16)
-
-        mapView.map = map
         val ld = mapView.locationDisplay
 
         ld.addLocationChangedListener { e ->
@@ -42,25 +44,24 @@ class MainActivity : AppCompatActivity() {
             val lon = e.location.position.x
             val lat = e.location.position.y
             Toast.makeText(this@MainActivity, "$lon:$lat to $acc units", Toast.LENGTH_SHORT).show()
+
+            tracks[deviceId]?.let { ptc ->
+                ptc.add(e.location.position)
+                trackingGraphics[deviceId]?.let { g ->
+                    g.geometry = Polyline(ptc)
+                }
+            }
         }
 
-        ld.autoPanMode = LocationDisplay.AutoPanMode.NAVIGATION
-        if (!ld.isStarted)
-            ld.startAsync()
-
         val locationsLayer = GraphicsOverlay()
-        val tracksLayer = GraphicsOverlay()
-        tracksLayer.opacity = 0.25f
-        val myTrackLayer = GraphicsOverlay()
-        myTrackLayer.opacity = 0.25f
 
-        mapView.graphicsOverlays.addAll(
-                listOf(locationsLayer, myTrackLayer, tracksLayer)
-        )
+        val activeTrackLayer = GraphicsOverlay()
+        activeTrackLayer.opacity = 0.25f
 
-        val locationMarker = SimpleMarkerSymbol(SimpleMarkerSymbol.Style.CIRCLE, -0x10000, 10f)
-        val othersTrackMarker = SimpleLineSymbol(SimpleLineSymbol.Style.SOLID, -0x10000, 5f)
-        val myTrackMarker = SimpleLineSymbol(SimpleLineSymbol.Style.SOLID, -0x01110, 5f)
+        val pastTracksLayer = GraphicsOverlay()
+        pastTracksLayer.opacity = 0.25f
+
+        mapView.graphicsOverlays.addAll(listOf(locationsLayer, activeTrackLayer, pastTracksLayer))
 
         client().newWebSocket(wsreq(), object : WebSocketListener() {
             override fun onMessage(webSocket: WebSocket?, text: String?) {
@@ -73,56 +74,48 @@ class MainActivity : AppCompatActivity() {
 
                     // api24; val g = locationGraphics.computeIfAbsent(id, { str -> Graphic(Point(0.0, 0.0)) })
                     if (!locationGraphics.containsKey(id)) {
-                        points.put(id, pt)
-
                         val g = Graphic(pt, locationMarker)
                         locationGraphics.put(id, g)
                         locationsLayer.graphics.add(g)
-
-                        val ptc = PointCollection(listOf(pt), SpatialReferences.getWgs84())
-                        tracks.put(id, ptc)
-
-                        val t = Graphic(Polyline(ptc), othersTrackMarker)
-                        trackingGraphics.put(id, t)
-                        tracksLayer.graphics.add(t)
                     }
                     locationGraphics[id]?.let { g ->
                         g.geometry = pt
-                    }
-                    tracks[id]?.let { ptc ->
-                        ptc.add(pt)
-
-                        trackingGraphics[id]?.let { g ->
-                            g.geometry = Polyline(ptc)
-                        }
                     }
                 }
             }
         })
 
         drawTracks.setOnCheckedChangeListener { _, v ->
-            tracksLayer.isVisible = v
+            pastTracksLayer.isVisible = v
         }
 
         newTrack.setOnCheckedChangeListener { _, v ->
             if (v) {
                 // http call to new track endpoint
                 client().newCall(track("start"))
-                val pt = Point(9.0, 9.0)
+                val pt = ld.location.position
 
                 val ptc = PointCollection(listOf(pt), SpatialReferences.getWgs84())
-                tracks.put("me", ptc)
+                tracks.put(deviceId, ptc)
 
-                val t = Graphic(Polyline(ptc), myTrackMarker)
-
-                trackingGraphics.put("me", t)
-                myTrackLayer.graphics.add(t)
+                val t = Graphic(Polyline(ptc), trackMarker)
+                trackingGraphics.put(deviceId, t)
+                activeTrackLayer.graphics.add(t)
             } else {
                 // http call to complete track endpoint
                 client().newCall(track("stop"))
-                // move tracking graphic from the new-track layer to the tracking layer
+
+                tracks.remove(deviceId)
+                val g = trackingGraphics[deviceId]
+                activeTrackLayer.graphics.remove(g)
+                pastTracksLayer.graphics.add(g)
             }
         }
+
+        mapView.map = map
+        ld.autoPanMode = LocationDisplay.AutoPanMode.NAVIGATION
+        if (!ld.isStarted)
+            ld.startAsync()
     }
 
     override fun onPause() {
