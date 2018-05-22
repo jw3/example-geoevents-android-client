@@ -9,7 +9,6 @@ import com.esri.arcgisruntime.geometry.Point
 import com.esri.arcgisruntime.geometry.PointCollection
 import com.esri.arcgisruntime.geometry.Polyline
 import com.esri.arcgisruntime.geometry.SpatialReferences
-import com.esri.arcgisruntime.location.AndroidLocationDataSource
 import com.esri.arcgisruntime.mapping.ArcGISMap
 import com.esri.arcgisruntime.mapping.Basemap
 import com.esri.arcgisruntime.mapping.view.Graphic
@@ -28,29 +27,6 @@ class MainActivity : AppCompatActivity() {
     private val locationGraphics = mutableMapOf<String, Graphic>()
     private val trackingGraphics = mutableMapOf<String, Graphic>()
 
-    private fun client(): OkHttpClient {
-        return OkHttpClient.Builder().build()
-    }
-
-    private fun wsreq(): Request {
-        return Request.Builder()
-                .get().url("ws://10.0.2.2:9000/api/watch/device").build()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        R.id.action_settings -> {
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivity(intent)
-            true
-        }
-        else -> super.onOptionsItemSelected(item)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -59,11 +35,7 @@ class MainActivity : AppCompatActivity() {
         val map = ArcGISMap(Basemap.Type.IMAGERY, 34.056295, -117.195800, 16)
 
         mapView.map = map
-
-
         val ld = mapView.locationDisplay
-
-        val ds = AndroidLocationDataSource(applicationContext)
 
         ld.addLocationChangedListener { e ->
             val acc = e.location.horizontalAccuracy
@@ -163,9 +135,32 @@ class MainActivity : AppCompatActivity() {
         mapView.resume()
     }
 
-    fun track(op: String): Request {
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
+        R.id.action_settings -> {
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
+            true
+        }
+        else -> super.onOptionsItemSelected(item)
+    }
+
+    private fun track(op: String): Request {
         return Request.Builder()
                 .post(RequestBody.create(null, ""))
-                .url("ws://10.0.2.2:9000/api/device/default/track/start").build()
+                .url("ws://10.0.2.2:9000/api/device/default/track/$op").build()
+    }
+
+    private fun client(): OkHttpClient {
+        return OkHttpClient.Builder().build()
+    }
+
+    private fun wsreq(): Request {
+        return Request.Builder()
+                .get().url("ws://10.0.2.2:9000/api/watch/device").build()
     }
 }
