@@ -171,9 +171,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun track(op: String, url: String): Request {
+        val deviceId = deviceId()
         return Request.Builder()
                 .post(RequestBody.create(null, ""))
-                .url("ws://$url/api/device/default/track/$op").build()
+                .url("ws://$url/api/device/$deviceId/track/$op").build()
     }
 
     private fun client(): OkHttpClient {
